@@ -177,7 +177,7 @@ func main() {
 	mux.HandleFunc("PUT /carts/{id}", updateCart)
 	mux.HandleFunc("DELETE /carts/{id}", removeCart)
 
-	mux.HandleFunc("POST /login", login)
+	mux.HandleFunc("POST /auth/login", login) // FakeStore-style auth endpoint
 	mux.HandleFunc("POST /users", createUser)     // public registration
 	mux.HandleFunc("GET /users", getAllUsers)     // admin only
 	mux.HandleFunc("PUT /users/{id}", updateUser) // admin or owner
