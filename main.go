@@ -159,7 +159,9 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	products = client.Database(env("DB_NAME", "happycart")).Collection("products")
+	db := client.Database(env("DB_NAME", "happycart"))
+	products = db.Collection("products")
+	carts = db.Collection("carts")
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /products", getAll)
@@ -167,6 +169,12 @@ func main() {
 	mux.HandleFunc("GET /products/{id}", getOne)
 	mux.HandleFunc("PUT /products/{id}", update)
 	mux.HandleFunc("DELETE /products/{id}", remove)
+
+	mux.HandleFunc("GET /carts", getAllCarts)
+	mux.HandleFunc("POST /carts", createCart)
+	mux.HandleFunc("GET /carts/{id}", getOneCart)
+	mux.HandleFunc("PUT /carts/{id}", updateCart)
+	mux.HandleFunc("DELETE /carts/{id}", removeCart)
 
 	addr := ":" + env("PORT", "8080")
 	log.Println("HappyCart API running on", addr)
