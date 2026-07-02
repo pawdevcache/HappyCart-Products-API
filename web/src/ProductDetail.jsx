@@ -2,13 +2,22 @@ import { useEffect, useState } from 'react'
 import { Link, useOutletContext, useParams } from 'react-router-dom'
 import { money } from './cart'
 
+// Distinct "views" of the single product photo, so the gallery reads like multiple images.
+const views = [
+  { label: 'Front', style: {} },
+  { label: 'Detail', style: { transform: 'scale(1.7)', objectPosition: 'top' } },
+  { label: 'Angle', style: { transform: 'scale(1.4)', objectPosition: 'bottom right' } },
+  { label: 'Studio', style: { filter: 'contrast(1.15) saturate(1.1) brightness(1.03)' } },
+]
+
 export default function ProductDetail() {
   const { id } = useParams()
   const { add, openBag } = useOutletContext()
   const [p, setP] = useState(null) // null = loading, false = not found
+  const [active, setActive] = useState(0)
 
   useEffect(() => {
-    setP(null)
+    setP(null); setActive(0)
     // Try the HappyCart backend; fall back to FakeStore (matches the store's data source).
     fetch(`/api/products/${id}`)
       .then(r => (r.ok ? r.json() : Promise.reject()))
@@ -24,7 +33,16 @@ export default function ProductDetail() {
     <section className="detail">
       <Link className="back" to="/">← Back to Collection</Link>
       <div className="dgrid">
-        <div className="dimg"><img src={p.image} alt={p.title} /></div>
+        <div className="dgallery">
+          <div className="dimg"><img src={p.image} alt={p.title} style={views[active].style} /></div>
+          <div className="thumbs">
+            {views.map((v, i) => (
+              <button key={i} className={'thumb-btn' + (i === active ? ' on' : '')} onClick={() => setActive(i)} aria-label={v.label}>
+                <img src={p.image} alt="" style={v.style} />
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="dmeta">
           <p className="cat">{p.category}</p>
           <h1>{p.title}</h1>
