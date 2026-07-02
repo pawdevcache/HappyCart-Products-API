@@ -50,7 +50,7 @@ a { cursor: pointer; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 34px; padding: 70px 6vw; }
 .card { background: var(--white); border: 1px solid var(--line); padding: 22px; transition: .25s;
-  display: flex; flex-direction: column; }
+  display: flex; flex-direction: column; text-decoration: none; color: inherit; cursor: pointer; }
 .card:hover { box-shadow: 0 18px 40px rgba(0,0,0,.10); transform: translateY(-4px); border-color: var(--gold); }
 .thumb { aspect-ratio: 1; display: grid; place-items: center; background: #faf9f6; margin-bottom: 18px; }
 .thumb img { max-height: 78%; max-width: 78%; object-fit: contain; mix-blend-mode: multiply; }
@@ -61,6 +61,22 @@ a { cursor: pointer; }
 .addbtn { background: var(--black); color: var(--white); border: 1px solid var(--black);
   padding: 9px 16px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; }
 .addbtn:hover { background: var(--gold); border-color: var(--gold); color: var(--black); }
+
+/* Product detail */
+.detail { padding: 48px 6vw 80px; min-height: 60vh; }
+.back { display: inline-block; color: var(--grey); text-decoration: none; font-size: 13px;
+  letter-spacing: 1px; text-transform: uppercase; margin-bottom: 34px; }
+.back:hover { color: var(--gold); }
+.dgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
+.dimg { background: #faf9f6; border: 1px solid var(--line); aspect-ratio: 1; display: grid; place-items: center; }
+.dimg img { max-width: 72%; max-height: 72%; object-fit: contain; mix-blend-mode: multiply; }
+.dmeta h1 { font-family: 'Playfair Display', serif; font-weight: 700; font-size: clamp(26px, 3vw, 40px);
+  line-height: 1.15; margin: 8px 0 14px; }
+.rating { color: var(--gold); font-size: 14px; letter-spacing: .5px; margin-bottom: 18px; }
+.price.big { font-size: 30px; font-family: 'Playfair Display', serif; }
+.desc { color: #555; line-height: 1.75; margin: 22px 0 34px; font-weight: 300; max-width: 46ch; }
+.dmeta .cta { margin-top: 0; }
+@media (max-width: 760px) { .dgrid { grid-template-columns: 1fr; gap: 30px; } }
 
 /* Footer */
 .foot { background: var(--black); color: #9a9a9a; text-align: center; padding: 54px 6vw; }
