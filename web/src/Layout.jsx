@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { useCart, money } from './cart'
 
-export default function Layout({ token, onLogout }) {
+export default function Layout({ token, isAdmin, onLogout }) {
   const cart = useCart()
   const [open, setOpen] = useState(false)
   const openBag = () => setOpen(true)
@@ -14,6 +14,7 @@ export default function Layout({ token, onLogout }) {
         <Link className="brand" to="/">HAPPY<span>CART</span></Link>
         <nav className="links"><a>New In</a><a>Collections</a><a>Jewelry</a><a>About</a></nav>
         <div className="navactions">
+          {isAdmin && <Link className="ghost" to="/admin">Admin</Link>}
           {token
             ? <button className="ghost" onClick={onLogout}>Sign Out</button>
             : <Link className="ghost" to="/login">Sign In</Link>}

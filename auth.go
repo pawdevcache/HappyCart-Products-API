@@ -24,6 +24,21 @@ func makeToken(id, role string) (string, error) {
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, c).SignedString(jwtSecret)
 }
 
+// admin wraps a handler so only authenticated admins may call it.
+func admin(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		cl, ok := requireAuth(w, r)
+		if !ok {
+			return
+		}
+		if cl.Role != "admin" {
+			fail(w, http.StatusForbidden, "admin only")
+			return
+		}
+		h(w, r)
+	}
+}
+
 // requireAuth parses the Bearer token; writes 401 and returns false if missing/invalid.
 func requireAuth(w http.ResponseWriter, r *http.Request) (*Claims, bool) {
 	tok := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")

@@ -163,13 +163,14 @@ func main() {
 	products = db.Collection("products")
 	carts = db.Collection("carts")
 	users = db.Collection("users")
+	seedAdmin()
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /products", getAll)
-	mux.HandleFunc("POST /products", create)
+	mux.HandleFunc("POST /products", admin(create))
 	mux.HandleFunc("GET /products/{id}", getOne)
-	mux.HandleFunc("PUT /products/{id}", update)
-	mux.HandleFunc("DELETE /products/{id}", remove)
+	mux.HandleFunc("PUT /products/{id}", admin(update))
+	mux.HandleFunc("DELETE /products/{id}", admin(remove))
 
 	mux.HandleFunc("GET /carts", getAllCarts)
 	mux.HandleFunc("POST /carts", createCart)

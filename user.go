@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -9,6 +10,19 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// seedAdmin creates a default admin account on startup if one doesn't exist.
+func seedAdmin() {
+	name, pass := env("ADMIN_USER", "admin"), env("ADMIN_PASS", "admin")
+	c, cancel := ctx()
+	defer cancel()
+	if n, _ := users.CountDocuments(c, bson.M{"username": name}); n > 0 {
+		return
+	}
+	h, _ := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
+	users.InsertOne(c, User{Username: name, Email: name + "@happycart.local", Password: string(h), Role: "admin"})
+	log.Printf("seeded admin user %q (password %q)", name, pass)
+}
 
 // User account. Password is stored hashed and never returned (omitempty + cleared).
 type User struct {
