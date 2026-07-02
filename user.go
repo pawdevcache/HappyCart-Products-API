@@ -50,10 +50,15 @@ func createUser(w http.ResponseWriter, r *http.Request) {
 func login(w http.ResponseWriter, r *http.Request) {
 	var body User
 	json.NewDecoder(r.Body).Decode(&body)
+	ident := body.Username // accept whatever the client sent as identifier
+	if ident == "" {
+		ident = body.Email
+	}
 	c, cancel := ctx()
 	defer cancel()
 	var u User
-	if users.FindOne(c, bson.M{"username": body.Username}).Decode(&u) != nil ||
+	q := bson.M{"$or": []bson.M{{"username": ident}, {"email": ident}}} // match by username OR email
+	if users.FindOne(c, q).Decode(&u) != nil ||
 		bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(body.Password)) != nil {
 		fail(w, http.StatusUnauthorized, "invalid credentials")
 		return
