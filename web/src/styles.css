@@ -168,9 +168,9 @@ a { cursor: pointer; }
 
 .pform { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .pform textarea, .pform .pactions { grid-column: 1 / -1; }
-.pform input, .pform textarea { padding: 12px 14px; border: 1px solid var(--line); background: #fbfaf7;
+.pform input, .pform textarea, .pform select { padding: 12px 14px; border: 1px solid var(--line); background: #fbfaf7;
   font-family: 'Inter', sans-serif; font-size: 14px; outline: none; }
-.pform input:focus, .pform textarea:focus { border-color: var(--gold); background: #fff; }
+.pform input:focus, .pform textarea:focus, .pform select:focus { border-color: var(--gold); background: #fff; }
 .pactions { display: flex; gap: 12px; align-items: center; }
 .pform .cta { margin: 0; }
 

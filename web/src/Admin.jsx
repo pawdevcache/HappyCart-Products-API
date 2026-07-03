@@ -10,6 +10,7 @@ export default function Admin({ token, isAdmin, onLogout }) {
   const [products, setProducts] = useState([])
   const [users, setUsers] = useState([])
   const [form, setForm] = useState(blank)
+  const [uForm, setUForm] = useState(null) // null = not editing a user
   const [msg, setMsg] = useState('')
 
   const loadProducts = () => fetch('/api/products').then(r => r.json()).then(d => setProducts(Array.isArray(d) ? d : []))
@@ -30,6 +31,16 @@ export default function Admin({ token, isAdmin, onLogout }) {
   }
   const delProduct = async id => { if (confirm('Delete this product?')) { await api(`/products/${id}`, 'DELETE', null, token); loadProducts() } }
   const delUser = async id => { if (confirm('Delete this user account?')) { try { await api(`/users/${id}`, 'DELETE', null, token); loadUsers() } catch (e) { setMsg(e.message) } } }
+
+  const editUser = u => { setUForm({ id: u.id || u._id, username: u.username, email: u.email, role: u.role, password: '' }) }
+  const onU = k => e => setUForm({ ...uForm, [k]: e.target.value })
+  const saveUser = async e => {
+    e.preventDefault(); setMsg('')
+    const { id, password, ...rest } = uForm
+    const body = { ...rest, ...(password ? { password } : {}) } // only send password if changed
+    try { await api(`/users/${id}`, 'PUT', body, token); setUForm(null); setMsg('User updated.'); loadUsers() }
+    catch (e) { setMsg(e.message) }
+  }
 
   return (
     <div className="admin">
@@ -84,6 +95,21 @@ export default function Admin({ token, isAdmin, onLogout }) {
 
       <section className="apanel">
         <h2>Users <span className="badge">{users.length}</span></h2>
+        {uForm && (
+          <form className="pform" onSubmit={saveUser}>
+            <input placeholder="Username" value={uForm.username} onChange={onU('username')} required />
+            <input placeholder="Email" type="email" value={uForm.email} onChange={onU('email')} />
+            <select value={uForm.role} onChange={onU('role')}>
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </select>
+            <input placeholder="New password (optional)" type="password" value={uForm.password} onChange={onU('password')} />
+            <div className="pactions">
+              <button className="cta" type="submit">Update User</button>
+              <button type="button" className="ghost dark" onClick={() => setUForm(null)}>Cancel</button>
+            </div>
+          </form>
+        )}
         <table className="atable">
           <thead><tr><th>Username</th><th>Email</th><th>Role</th><th></th></tr></thead>
           <tbody>
@@ -95,6 +121,7 @@ export default function Admin({ token, isAdmin, onLogout }) {
                   <td>{u.email}</td>
                   <td><span className={'rolechip' + (u.role === 'admin' ? ' gold' : '')}>{u.role}</span></td>
                   <td className="acts">
+                    <button onClick={() => editUser(u)}>Edit</button>
                     <button className="danger" disabled={u.role === 'admin'} onClick={() => delUser(id)}>Delete</button>
                   </td>
                 </tr>
