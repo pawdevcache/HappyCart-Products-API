@@ -1,0 +1,13 @@
+# Build artifacts
+*.exe
+*.exe~
+/server
+
+# Frontend
+web/node_modules/
+web/dist/
+
+# Logs & local env
+*.log
+.env
+.env.local

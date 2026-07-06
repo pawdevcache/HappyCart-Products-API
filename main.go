@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -165,26 +166,46 @@ func main() {
 	users = db.Collection("users")
 	seedAdmin()
 
+	// All API routes live under /api so the same paths work in dev (Vite proxy)
+	// and in production (this binary also serves the built frontend).
+	api := http.NewServeMux()
+	api.HandleFunc("GET /products", getAll)
+	api.HandleFunc("POST /products", admin(create))
+	api.HandleFunc("GET /products/{id}", getOne)
+	api.HandleFunc("PUT /products/{id}", admin(update))
+	api.HandleFunc("DELETE /products/{id}", admin(remove))
+
+	api.HandleFunc("GET /carts", getAllCarts)
+	api.HandleFunc("POST /carts", createCart)
+	api.HandleFunc("GET /carts/{id}", getOneCart)
+	api.HandleFunc("PUT /carts/{id}", updateCart)
+	api.HandleFunc("DELETE /carts/{id}", removeCart)
+
+	api.HandleFunc("POST /auth/login", login) // FakeStore-style auth endpoint
+	api.HandleFunc("POST /users", createUser)     // public registration
+	api.HandleFunc("GET /users", getAllUsers)     // admin only
+	api.HandleFunc("PUT /users/{id}", updateUser) // admin or owner
+	api.HandleFunc("DELETE /users/{id}", removeUser)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("GET /products", getAll)
-	mux.HandleFunc("POST /products", admin(create))
-	mux.HandleFunc("GET /products/{id}", getOne)
-	mux.HandleFunc("PUT /products/{id}", admin(update))
-	mux.HandleFunc("DELETE /products/{id}", admin(remove))
-
-	mux.HandleFunc("GET /carts", getAllCarts)
-	mux.HandleFunc("POST /carts", createCart)
-	mux.HandleFunc("GET /carts/{id}", getOneCart)
-	mux.HandleFunc("PUT /carts/{id}", updateCart)
-	mux.HandleFunc("DELETE /carts/{id}", removeCart)
-
-	mux.HandleFunc("POST /auth/login", login) // FakeStore-style auth endpoint
-	mux.HandleFunc("POST /users", createUser)     // public registration
-	mux.HandleFunc("GET /users", getAllUsers)     // admin only
-	mux.HandleFunc("PUT /users/{id}", updateUser) // admin or owner
-	mux.HandleFunc("DELETE /users/{id}", removeUser)
+	mux.Handle("/api/", http.StripPrefix("/api", api))
+	mux.HandleFunc("/", serveStatic) // built React app + SPA fallback
 
 	addr := ":" + env("PORT", "8080")
-	log.Println("HappyCart API running on", addr)
+	log.Println("HappyCart running on", addr)
 	log.Fatal(http.ListenAndServe(addr, mux))
+}
+
+// serveStatic serves the built frontend (web/dist). Any path that isn't a real
+// file falls back to index.html so client-side routes (e.g. /admin) still load.
+func serveStatic(w http.ResponseWriter, r *http.Request) {
+	dir := env("STATIC_DIR", "web/dist")
+	index := filepath.Join(dir, "index.html")
+	// Clean the request path and resolve it inside the static dir.
+	p := filepath.Join(dir, filepath.Clean("/"+r.URL.Path))
+	if info, err := os.Stat(p); err != nil || info.IsDir() {
+		http.ServeFile(w, r, index) // unknown path → let React Router handle it
+		return
+	}
+	http.ServeFile(w, r, p)
 }

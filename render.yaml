@@ -1,0 +1,22 @@
+# Render Blueprint — https://render.com/docs/blueprint-spec
+# Deploys the Go binary (which also serves the built React frontend) as one
+# Docker web service. MongoDB is NOT hosted here — use MongoDB Atlas (free M0)
+# and paste its connection string into the MONGODB_URI env var in the dashboard.
+services:
+  - type: web
+    name: happycart
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/products
+    envVars:
+      - key: MONGODB_URI
+        sync: false            # set in the Render dashboard (secret)
+      - key: DB_NAME
+        value: happycart
+      - key: JWT_SECRET
+        generateValue: true    # Render generates a strong random secret
+      - key: ADMIN_USER
+        sync: false            # your admin username
+      - key: ADMIN_PASS
+        sync: false            # your admin password (set a strong one!)
