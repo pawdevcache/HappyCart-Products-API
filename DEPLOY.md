@@ -1,10 +1,18 @@
-# Deploying HappyCart
+# Deploying HappyCart (Frontend on Vercel + Backend on Render)
 
-HappyCart ships as **one service**: the Go binary serves both the REST API
-(under `/api`) and the built React frontend. You need two things online:
+HappyCart has three parts, hosted in two places:
 
-1. **MongoDB Atlas** — a free managed database (replaces your local MongoDB).
-2. **Render** — hosts the Go+React service, built from the `Dockerfile`.
+| Part | Host | Why |
+|------|------|-----|
+| **MongoDB** | MongoDB Atlas (free) | Managed database — can't ship your localhost DB |
+| **Go API** | Render (Docker) | Runs a persistent server; Vercel cannot |
+| **React frontend** | Vercel (static/CDN) | Vercel is great at serving static sites |
+
+The frontend calls `/api/...` and Vercel **rewrites** those requests to the
+Render backend server-side — so there's **no CORS setup** and the frontend code
+is identical to local dev.
+
+> **Deploy the backend FIRST** — you need its URL to configure the frontend.
 
 ---
 
@@ -13,78 +21,94 @@ HappyCart ships as **one service**: the Go binary serves both the REST API
 1. Sign up at <https://www.mongodb.com/cloud/atlas> and create a **free M0 cluster**.
 2. **Database Access** → add a database user (username + password). Save these.
 3. **Network Access** → Add IP Address → **Allow access from anywhere** (`0.0.0.0/0`).
-   (Render's outbound IPs aren't fixed on the free plan, so this is required.)
-4. **Connect → Drivers** → copy the connection string. It looks like:
+4. **Connect → Drivers** → copy the connection string:
    ```
    mongodb+srv://<user>:<password>@cluster0.xxxxx.mongodb.net/?retryWrites=true&w=majority
    ```
-   Replace `<user>` and `<password>` with the credentials from step 2.
-   This is your **`MONGODB_URI`**.
+   Fill in your user/password. This is your **`MONGODB_URI`**.
 
 ---
 
 ## 2. Push the code to GitHub
 
-Render deploys from a Git repo. From the project root:
-
 ```bash
 git add .
-git commit -m "Add deployment config (Docker + Render)"
-git push origin main        # or: git push origin dev
+git commit -m "Add deployment config (Render backend + Vercel frontend)"
+git push
 ```
 
 ---
 
-## 3. Deploy on Render
+## 3. Deploy the BACKEND on Render
 
-**Option A — Blueprint (uses `render.yaml`, easiest):**
+1. <https://dashboard.render.com> → **New → Web Service** → connect your repo
+   (`HappyCart-Products-API`).
+2. Runtime: **Docker** (auto-detected from the `Dockerfile`). Instance: **Free**.
+3. Add these environment variables:
 
-1. Go to <https://dashboard.render.com> → **New → Blueprint**.
-2. Connect your GitHub repo. Render reads `render.yaml` and proposes the service.
-3. When prompted, fill in the secret env vars (see the table below).
-4. Click **Apply**. First build takes a few minutes.
+   | Variable      | Value                                      |
+   |---------------|--------------------------------------------|
+   | `MONGODB_URI` | Your Atlas string from step 1              |
+   | `JWT_SECRET`  | A long random string                       |
+   | `ADMIN_USER`  | Your admin username                        |
+   | `ADMIN_PASS`  | A **strong** password (not `admin`!)       |
 
-**Option B — Manual:**
-
-1. **New → Web Service** → connect the repo.
-2. Runtime: **Docker** (Render auto-detects the `Dockerfile`).
-3. Instance type: **Free**.
-4. Add the environment variables below, then **Create Web Service**.
-
-### Environment variables
-
-| Variable      | Value                                                        | Required |
-|---------------|-------------------------------------------------------------|----------|
-| `MONGODB_URI` | Your Atlas connection string from step 1                    | ✅ yes |
-| `JWT_SECRET`  | A long random string (Blueprint auto-generates one)         | ✅ yes |
-| `ADMIN_USER`  | Your admin login username                                   | recommended |
-| `ADMIN_PASS`  | A **strong** admin password (not `admin`!)                  | ✅ yes |
-| `DB_NAME`     | `happycart` (default — only set to override)                | no |
-| `PORT`        | Leave unset — Render provides it automatically              | no |
-
-> On first startup the app seeds an admin account from `ADMIN_USER` / `ADMIN_PASS`.
-> Set a strong `ADMIN_PASS` **before** the first deploy, or anyone could log in
-> with `admin` / `admin`.
+4. **Create Web Service.** When it's live, copy its URL, e.g.
+   `https://happycart-api.onrender.com`. **You need this for the next step.**
+5. Sanity check: open `https://<your-render-url>/api/products` — it should
+   return `[]` (or a JSON list), not a 404.
 
 ---
 
-## 4. Verify
+## 4. Point the frontend at your backend
 
-When the deploy is live, Render gives you a URL like `https://happycart.onrender.com`.
+Edit **`web/vercel.json`** and replace the placeholder host with your real
+Render URL from step 3:
 
-- Open it → the storefront loads.
-- Go to `/admin/login` → sign in with your `ADMIN_USER` / `ADMIN_PASS`.
-- The API is reachable under `/api`, e.g. `https://happycart.onrender.com/api/products`.
+```json
+"destination": "https://happycart-api.onrender.com/api/:path*"
+```
+
+Then commit and push:
+
+```bash
+git add web/vercel.json
+git commit -m "Point frontend at Render backend"
+git push
+```
+
+---
+
+## 5. Deploy the FRONTEND on Vercel
+
+1. <https://vercel.com/new> → import the same GitHub repo.
+2. **Important — set the Root Directory to `web`.**
+   (Click *Edit* next to Root Directory and choose the `web` folder.)
+   Vercel auto-detects Vite; leave build command / output as detected.
+3. Click **Deploy.**
+4. Open the Vercel URL → the store loads, and API calls flow through to Render.
+
+---
+
+## 6. Verify
+
+- Vercel URL (e.g. `https://happy-cart.vercel.app`) → storefront loads.
+- `/admin/login` → sign in with your `ADMIN_USER` / `ADMIN_PASS`.
+- Products/users load → the Vercel→Render rewrite is working.
 
 ---
 
 ## Notes & gotchas
 
-- **Free plan sleeps.** After ~15 min idle the service spins down; the next
-  request takes ~30s to wake it. Upgrade to a paid instance to keep it warm.
-- **Seeding products.** The catalog starts empty. Add products from the admin
-  dashboard, or POST to `/api/products` with an admin token.
-- **Local dev is unchanged.** Run `go run .` (backend) and `npm run dev` in
-  `web/` (frontend) as before — the Vite proxy forwards `/api` to `:8080`.
-- **Rebuilding after frontend changes for a local production test:**
-  `cd web && npm run build`, then run the Go binary — it serves `web/dist`.
+- **Render free instances sleep** after ~15 min idle. The first request after
+  that takes ~30–50s to wake the server, so the first page load may be slow or
+  time out once — refresh and it works. Upgrade to a paid instance to avoid this.
+- **Set `ADMIN_PASS` before the first backend deploy.** The app seeds an admin
+  account on first startup from `ADMIN_USER`/`ADMIN_PASS`; if you leave the
+  defaults, anyone could log in with `admin`/`admin`.
+- **Changed the backend URL?** Update `web/vercel.json` and push — Vercel
+  redeploys automatically.
+- **Local dev is unchanged.** `go run .` + `npm run dev` in `web/`. The Vite
+  proxy handles `/api` locally; `vercel.json` handles it in production.
+- The Render backend also serves a copy of the frontend at its own URL — handy
+  for testing the API in isolation, but your real site is the Vercel URL.
